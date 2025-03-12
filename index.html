@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Dodger</title>
+    <link rel="icon" type="assert/png" href="static/favicon.png">
+    <style>
+        body { text-align: center; font-family: Arial, sans-serif; background: #222; color: white; }
+        h1 { margin-bottom: 10px; }
+        canvas { background: black; display: block; margin: auto; border: 2px solid white; }
+        #scoreboard { font-size: 20px; margin: 10px; }
+        .mode-btn { margin: 5px; padding: 10px 15px; font-size: 16px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>AI Dodger: Escape the Missiles!</h1>
+    <div>
+        <button class="mode-btn" onclick="setDifficulty('easy')">Easy</button>
+        <button class="mode-btn" onclick="setDifficulty('medium')">Medium</button>
+        <button class="mode-btn" onclick="setDifficulty('hard')">Hard</button>
+        <button class="mode-btn" onclick="toggleControl()">Switch to Mouse Control</button>
+        <!-- <button class="mode-btn" onclick="toggleAI()">Use AI</button> -->
+        <button class="mode-btn" onclick="restartGame()">Restart Game</button>
+    </div>
+    <div id="scoreboard">Player Score: 0 | AI Score: 0 | Lives: 3</div>
+    <canvas id="gameCanvas" width="500" height="500"></canvas>
+    
+    <script>
+        const hitSound = new Audio('hit.mp3');
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreboard = document.getElementById('scoreboard');
+
+        let player = { x: 240, y: 450, size: 20, color: 'blue' };
+        let missiles = [];
+        let playerScore = 0;
+        let aiScore = 0;
+        let lives = 3;
+        let useMouseControl = false;
+        let useAI = true;
+        let missileCount = 3;
+        
+        document.addEventListener('keydown', (event) => {
+            if (!useMouseControl) {
+                if (event.key === 'ArrowLeft' && player.x > 0) player.x -= 20;
+                if (event.key === 'ArrowRight' && player.x < 480) player.x += 20;
+            }
+        });
+
+        canvas.addEventListener('mousemove', (event) => {
+            if (useMouseControl) {
+                let rect = canvas.getBoundingClientRect();
+                let mouseX = event.clientX - rect.left;
+                player.x = Math.max(0, Math.min(mouseX - player.size / 2, canvas.width - player.size));
+            }
+        });
+
+        function spawnMissiles() {
+            missiles = [];
+            for (let i = 0; i < missileCount; i++) {
+                missiles.push({ x: Math.random() * (canvas.width - 20), y: 0, size: 20, speed: 3, color: 'red' });
+            }
+        }
+
+        function checkCollision(missile) {
+            return (
+                missile.y + missile.size >= player.y &&
+                missile.x < player.x + player.size &&
+                missile.x + missile.size > player.x
+            );
+        }
+
+        function updateGame() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = player.color;
+            ctx.fillRect(player.x, player.y, player.size, player.size);
+            
+            missiles.forEach((missile, index) => {
+                ctx.fillStyle = missile.color;
+                ctx.fillRect(missile.x, missile.y, missile.size, missile.size);
+                missile.y += missile.speed;
+                
+                if (missile.y > 500) {
+                    playerScore++;
+                    missiles[index] = { x: Math.random() * (canvas.width - 20), y: 0, size: 20, speed: missile.speed + 0.1, color: 'red' };
+                }
+                
+                if (checkCollision(missile)) {
+                    hitSound.play();  // Play sound on collision
+                    aiScore++;
+                    lives--;
+                    missiles[index] = { x: Math.random() * (canvas.width - 20), y: 0, size: 20, speed: missile.speed, color: 'red' };
+                    if (lives <= 0) {
+                        alert(`Game Over! Your final score: ${playerScore}`);
+                        restartGame();
+                    }
+                }
+            });
+            
+            scoreboard.innerText = `Player Score: ${playerScore} | AI Score: ${aiScore} | Lives: ${lives}`;
+            requestAnimationFrame(updateGame);
+        }
+
+        function setDifficulty(level) {
+            const settings = { easy: 3, medium: 5, hard: 7 };
+            missiles.forEach(missile => missile.speed = settings[level] || 3);
+        }
+
+        function toggleControl() {
+            useMouseControl = !useMouseControl;
+            document.querySelectorAll('.mode-btn')[3].innerText = useMouseControl 
+                ? "Switch to Keyboard Control" 
+                : "Switch to Mouse Control";
+        }
+
+        function toggleAI() {
+            useAI = !useAI;
+            document.querySelectorAll('.mode-btn')[4].innerText = useAI ? "Stop AI" : "Use AI";
+        }
+
+        function restartGame() {
+            playerScore = 0;
+            aiScore = 0;
+            lives = 3;
+            missileCount = 3;
+            spawnMissiles();
+            scoreboard.innerText = `Player Score: ${playerScore} | AI Score: ${aiScore} | Lives: ${lives}`;
+        }
+
+        spawnMissiles();
+        updateGame();
+    </script>
+</body>
+</html>
+    
